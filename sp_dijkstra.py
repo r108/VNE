@@ -30,6 +30,7 @@ import config
 def dijkstra(adj, costs, s, t):
 
     print(config.avoid,"///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////")
+    print("adj",adj,"\ncosts",costs,"\ns",s," t",t)
     ''' Return predecessors and min distance if there exists a shortest path
         from s to t; Otherwise, return None '''
     Q = []     # priority queue of items; note item is mutable.
@@ -37,24 +38,33 @@ def dijkstra(adj, costs, s, t):
     Qd = {}    # vertex -> [d[v], parent_v, v]
     p = {}     # predecessor
     visited_set = set([s])
-    for n in config.avoid:
-        if n != 0:
-            print(n)
-            visited_set.add(n)
+    #config.avoid = list(set(config.avoid))
+ #   for n in config.avoid:
+ #       if n != 0:
+ #           print(n)
+ #           if n not in visited_set:
+ #               visited_set.add(n)
+ #               print(".....................................................")
+ #   print("adj.get(s, [])",adj.get(s, []))
     for v in adj.get(s, []):
         d[v] = costs[s, v]
+ #       print("v|",d[v])
         item = [d[v], s, v]
+  #      print("item ",item)
         heapq.heappush(Q, item)
         Qd[v] = item
 
     print("start at:", s)
     while Q:
 
-        #print("Q is: ",Q)
+  #      print("Q is: ",Q)
         cost, parent, u = heapq.heappop(Q)
+  #      print("cost, parent, u",cost, parent, u)
         if u not in visited_set:
-            print ('visit:', u)
+   #         print ('visit:', u)
 
+ #           if (parent in config.avoid) or (parent in config.avoid):
+    #            cost = 1000000
 
             p[u]= parent
             visited_set.add(u)
@@ -72,10 +82,13 @@ def dijkstra(adj, costs, s, t):
                     item = [d[v], u, v]
                     heapq.heappush(Q, item)
                     Qd[v] = item
-    print("Empty Q: ",Q)
+    print("Empty Q, NO PATH EXISTS: ",Q)
     return None
 
-def display_shortest_path(path):
+def get_shortest_path(graph, weight, frm, to):
+    path = find_sp(graph, weight, frm, to)
+    if path is None:
+        return None, None
     shortest_path = []
     print('Shortest path is ', end="")
     for idx, p in enumerate(path):
@@ -103,19 +116,21 @@ def make_undirected(cost):
 
 def find_sp(graph, weight, frm, to):
     adj=graph
-    cost=weight
-    cost = make_undirected(cost)
+    cost = make_undirected(weight)
 
     s = frm
     t = to
     #print("ADJ", adj," and \nWEIGHT ",weight, " for s-t ",s,t)
-    predecessors, min_cost = dijkstra(adj, cost, s, t)
-    c = t
-    path = [c]
-    print ('min cost:', min_cost)
-    while predecessors.get(c):
-        path.insert(0, predecessors[c])
-        c = predecessors[c]
+    if dijkstra(adj, cost, s, t) is not None:
+        predecessors, min_cost = dijkstra(adj, cost, s, t)
+        c = t
+        path = [c]
+        print ('min cost:', min_cost)
+        while predecessors.get(c):
+            path.insert(0, predecessors[c])
+            c = predecessors[c]
+    else:
+        path = None
 
-    #print ('shortest path:', path)
+
     return path
