@@ -19,18 +19,26 @@ CRED = '\33[31m'
 CEND = '\33[0m'
 
 
-#G = nx.Graph()
+
 GW = nx.Graph()
-
-#WSN_Nodes = nx.Graph()
-#WSN_Links = nx.Graph()
 vwsn_list  = []
-
-
-
 wsn = WSN()
 
 exit_flag = True
+
+
+def update_all_nodes_attributes(load):
+
+    for n, d in WSN_Nodes.nodes(data=True):
+        WSN_Nodes[n]['load'] = load
+        WSN_Nodes[n]['rank'] = WSN_Nodes.neighbors(n)
+
+def update_node_attributes(Nodes, node, load):
+    for n, d in Nodes.nodes_iter(data=True):
+        #print("n is",type(n),"and node is",type(node))
+        if n == int(node):
+            d['load'] = d['load']+int(load)
+            d['rank'] = len(adj[n])
 
 def update_all_links_attributes(plr, load):
     for u,v,d  in WSN_Links.edges_iter(data=True):
@@ -57,24 +65,23 @@ def update_link_attributes(u, v, plr, load):
     WSN_Links[u][v]['weight'] = link_weight.get_weight(link_weight)
     links[(u, v)] = link_weight.get_weight(link_weight)
 
-
-def difference(Nodes, R):
-    DIF = nx.create_empty_copy(R)
-
-    if set(Nodes != set(R)):
-        raise nx.NetworkXError("Graphs are not equal!!")
-
-    r_edges = set(R.edges_iter())
-    s_edges = set(Nodes.edges_iter())
-
-    diff_edges = r_edges.symmetric_difference(s_edges)
-
-    #in case edges are in r but not in s
-    diff_edges = r_edges - s_edges
-
-    DIF.add_edges_from(diff_edges)
-
-    return DIF
+def display_edge_attr(G):
+    for u,v,d in G.edges_iter(data=True):
+        if 'weight' in d:
+            if 'plr' in d:
+                if 'load' in d:
+                    print("Edge", CGREEN, u, "<->", v, CEND, "has",
+                          CBLUEBG, "weight", d['weight'], CEND,
+                          CVIOLETBG, "plr", format(G[u][v]['plr']), CEND,
+                          CGREYBG, "load", format(G[u][v]['load']), CEND)
+                else:
+                    print(CRED,"Missing",CGREYBG,"load",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
+            else:
+                print(CRED,"Missing",CVIOLETBG,"plr",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
+        else:
+            print(CRED,"Missing",CBLUEBG,"weight",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
+    #print(G[u][v].keys())
+    print("")
 
 def display_node_attr(G):
     print("")
@@ -106,29 +113,13 @@ def display_vn_edge_allocation(G):
             print(CRED,"Missing",CGREYBG,"load",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
     print("")
 
-def display_edge_attr(G):
-    for u,v,d in G.edges_iter(data=True):
-        if 'weight' in d:
-            if 'plr' in d:
-                if 'load' in d:
-                    print("Edge", CGREEN, u, "<->", v, CEND, "has",
-                          CBLUEBG, "weight", d['weight'], CEND,
-                          CVIOLETBG, "plr", format(G[u][v]['plr']), CEND,
-                          CGREYBG, "load", format(G[u][v]['load']), CEND)
-                else:
-                    print(CRED,"Missing",CGREYBG,"load",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
-            else:
-                print(CRED,"Missing",CVIOLETBG,"plr",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
-        else:
-            print(CRED,"Missing",CBLUEBG,"weight",CEND,CRED,"attribute in",CEND,CGREEN,u,"<->",v,CEND)
-    #print(G[u][v].keys())
-    print("")
-
 def show_graph_plot(G,shortest_path, path):
 
-    config.plot_counter += 1
-    embeding_positions = list(map(int,path))
-    colors=[]
+    plt.show() # display
+
+def generate_plot(G,shortest_path, path,plt,weight_flag):
+    embeding_positions = list(map(int, path))
+    colors = []
 
     for n in G.nodes():
         if n in embeding_positions:
@@ -139,95 +130,34 @@ def show_graph_plot(G,shortest_path, path):
     positions = wsn.get_nodes_position()
     fixed_positions = dict()
     for n in G.nodes(data=False):
-        fixed_positions.update({n:positions[n]})
-    #fixed_positions = dict(x,d for x,d in fixed_positions if x  in G.nodes(data=False))
+        fixed_positions.update({n: positions[n]})
+    # fixed_positions = dict(x,d for x,d in fixed_positions if x  in G.nodes(data=False))
 
     fixed_nodes = fixed_positions.keys()
 
-    #elarge=[(u,v) for (u,v,d) in G.edges(data=True) if d['weight'] >1200]
-    esmall=[(u,v) for (u,v,d) in G.edges(data=True)]# if d['weight'] <=1200]
+    # elarge=[(u,v) for (u,v,d) in G.edges(data=True) if d['weight'] >1200]
+    esmall = [(u, v) for (u, v, d) in G.edges(data=True)]  # if d['weight'] <=1200]
+    if weight_flag == True:
+        edge_labels = dict([((u, v), d['weight']) for u, v, d in G.edges(data=True)])
+    else:
+        edge_labels = dict([((u, v), d['load']) for u, v, d in G.edges(data=True)])
 
-    edge_labels = dict([((u,v),d['load']) for u,v,d in G.edges(data=True)])
-    eembed=shortest_path
-    #eembed.append((1,2))
-    pos=nx.spring_layout(G,pos=fixed_positions, fixed=fixed_nodes) # positions for all nodes
+    eembed = shortest_path
+    # eembed.append((1,2))
+    pos = nx.spring_layout(G, pos=fixed_positions, fixed=fixed_nodes)  # positions for all nodes
     # nodes
-    nx.draw_networkx_nodes(G,pos,node_size=300, node_color=colors)
+
+    nx.draw_networkx_nodes(G, pos, ax=plt, node_size=300, node_color=colors)
     # edges
-    #nx.draw_networkx_edges(G,pos,edgelist=elarge,width=2)
-    nx.draw_networkx_edges(G,pos,edgelist=eembed,width=10, edge_color='r')
+    # nx.draw_networkx_edges(G,pos,edgelist=elarge,width=2)
+    nx.draw_networkx_edges(G, pos, ax=plt, edgelist=eembed, width=10, edge_color='r')
 
-    nx.draw_networkx_edges(G,pos,edgelist=esmall,
-                        width=4,alpha=0.5,edge_color='b',style='dashed')
+    nx.draw_networkx_edges(G, pos, ax=plt, edgelist=esmall,
+                           width=4, alpha=0.5, edge_color='b', style='dashed')
     # labels
-    nx.draw_networkx_labels(G,pos,font_size=15,font_family='sans-serif')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,font_size=12)
+    nx.draw_networkx_labels(G, pos, ax=plt, font_size=15, font_family='sans-serif')
+    nx.draw_networkx_edge_labels(G, pos, ax=plt, edge_labels=edge_labels, font_size=12)
 
-
-    plt.axis('on')
-    plt.savefig("weighted_graph"+str(config.plot_counter)+".png") # save as png
-    plt.show() # display
-
-def update_all_nodes_attributes(load):
-
-    for n, d in WSN_Nodes.nodes(data=True):
-        WSN_Nodes[n]['load'] = load
-        WSN_Nodes[n]['rank'] = WSN_Nodes.neighbors(n)
-
-def update_node_attributes(Nodes, node, load):
-    for n, d in Nodes.nodes_iter(data=True):
-        #print("n is",type(n),"and node is",type(node))
-        if n == int(node):
-            d['load'] = d['load']+int(load)
-            d['rank'] = len(adj[n])
-
-
-def embed_nodes(nodes_to_em, quota):
-    nodes_list =[]
-    vn = []
-    vn_links = nx.Graph()
-    vn_nodes = nx.Graph()
-    frm = nodes_to_em[0]
-    to = nodes_to_em[1]
-    for n in nodes_to_em:
-        nodes_list.append(n)
-        update_node_attributes(WSN_Nodes, int(n), int(quota))
-        vn_nodes.add_node(int(n), load = int(quota))
-        #vnr.add_node(n, load=int(quota))
-        #vn_nodes[n]['load'] = int(quota)
-    vn.append(vn_nodes)
-    #print('nodes to em', nodes_list)
-    shortest_path, path_nodes = sp.get_shortest_path(adj, links, int(frm), int(to))
-
-
-    for l in shortest_path:
-
-
-
-       WSN_Links[l[0]][l[1]]['load'] = WSN_Links[l[0]][l[1]]['load'] + int(quota)
-       update_link_attributes(l[0], l[1], WSN_Links[l[0]][l[1]]['plr'], WSN_Links[l[0]][l[1]]['load'])
-       vn_links.add_edge(l[0],l[1], load=int(quota))
-       #vnr.add_edge(l[0],l[1], load=int(quota))
-
-       #vn_links[l[0]][l[1]] ['load']= int(quota)
-    vn.append(vn_links)
-    vwsn_list.append(vn)
- #   for i,vn in enumerate(vwsn_list):
- #       for j,val in enumerate(vn):
- #           for vnode,d in vn_nodes.nodes_iter(data=True):
- #             #  print("it a type ", type(vnode))
- #               print("node in embedded list is - ",vnode)
- #               print("data is ",vn_nodes.__getitem__(vnode))
-
-    display_vn_nodes(vn_nodes)
-    display_vn_links(vn_links)
-    display_node_attr(WSN_Nodes)
-    display_edge_attr(WSN_Links)
-#    print("shp", shortest_path)
-#   print("pn", path_nodes)
-#    print("n2e--", nodes_to_em)
-#    print("n2e", list(map(int,nodes_to_em)))
-    show_graph_plot(wsn.get_wsn_links(), shortest_path, nodes_to_em)
 
 def display_vn_nodes(vn_nodes):
 
@@ -246,6 +176,10 @@ def display_data_structs():
     print("adj_list - ", wsn.get_adjacency_list())
     print("Interference list - ", two_hops_list)
     print("Links - ", links)
+######################################################################################################
+
+
+
 
 
 def get_conflicting_links(path_nodes):
@@ -295,9 +229,9 @@ def get_conflicting_links(path_nodes):
             remove_list.append(n)
 
         elist2 = list(set(elist))
-        print("counter1", counter1)
-        print("get conflict elist: ", elist)
-        print("get conflict elist2: ", elist2)
+        #print("counter1", counter1)
+    print("get conflict elist: ", elist)
+    print("get conflict elist2: ", elist2)
 
 #    for u, v in elist2:
 #        print(u, v, "elist2 times", elist.count((u, v)))
@@ -353,66 +287,161 @@ def embed_vn(VN):
     config.link_weights = copy.deepcopy(links)
     config.two_hops = copy.deepcopy(two_hops_list)
 
-    print("@",config.link_weights)
-    print("VN embedding: ",VN)
+    print("VN embedding: ", VN)
+    print("@links->config.link_weights",config.link_weights)
+
 
     vwsn_nodes = VN[1]
     link_reqiurement = VN[2]
 
     frm = list(vwsn_nodes)[0]
-    to = list(vwsn_nodes)[1]
+    to = list(vwsn_nodes)[2]
 
-    node_requirement = vwsn_nodes[frm]['load']
+    node_requirement = vwsn_nodes[1]['load']
     config.avoid = [(0,0)]
     verify(link_reqiurement, frm, to, node_requirement)
 
 
 def verify(link_reqiurement, frm, to, node_requirement):
     config.counter_value = config.counter_value +1
-    print(config.counter_value,"counter ")
+
+    print("verify ----------------------------",config.counter_value,"counter ")
+
+
+
+
 
     node_check, VN_nodes = check_node_constraints([frm,to], node_requirement)
     if node_check != 0:
         print("node ", node_check, "does not have enough resource\nEMBEDDING FAILED!")
-        exit()
+        return
     else:
         print("source and sink nodes have enough resource")
 
     if config.has_embedding == True:
-        print("config.has_embedding is",config.has_embedding)
         if (0,0) in config.avoid: config.avoid.remove((0,0))
-        print("ccconfig.avoid",config.avoid)
-        for u,v in config.avoid:
-            config.avoid.remove((u, v))
-            print("ccconfig.avoid after", config.avoid)
-
-            print("u,v",u,v)
-            print(config.reduced_adj.get(u), "forrr", v)
-            print(config.reduced_adj.get(v), "forrr", u)
-            config.reduced_adj.get(u).remove(v)
-            config.reduced_adj.get(v).remove(u)
-            config.two_hops.get(v).remove(u)
-            config.two_hops.get(u).remove(v)
-
-            print("config.avoid before",config.avoid)
-
-            print("config.avoid after", config.avoid)
-            print(config.reduced_adj.__getitem__(u),"for",v)
-            print(config.reduced_adj.__getitem__(v),"for",u)
-            print("adj",adj.get(u),"reduced_ad",config.reduced_adj.__getitem__(u))
-            print("adj", adj.get(v), "reduced_ad", config.reduced_adj.__getitem__(v))
-            config.link_weights[(u,v)] = 1000000
-            print("config.link_weights[(u,v)]",config.link_weights[(int(u),int(v))],"\nlinks[(u,v)]",links[(int(u),int(v))])
 
         shortest_path, path_nodes = sp.get_shortest_path(config.reduced_adj, config.link_weights, frm, to)
+
+        print("ccconfig.avoid",config.avoid)
+        for u,v in config.avoid:
+            #config.avoid.remove((u, v))
+            print("ccconfig.avoid after", config.avoid)
+            print("sp",shortest_path,"\nn", path_nodes )
+
+            print("u,v",u,v)
+            #print(config.reduced_adj.get(u), "forrr", v)
+            #print(config.reduced_adj.get(v), "forrr", u)
+#            config.reduced_adj.get(u).remove(v)
+#            config.reduced_adj.get(v).remove(u)
+#            config.two_hops.get(v).remove(u)
+#            config.two_hops.get(u).remove(v)
+
+
+            #print("config.avoid after", config.avoid)
+            #print(config.reduced_adj.__getitem__(u),"for",v)
+            #print(config.reduced_adj.__getitem__(v),"for",u)
+            ##print("adj",adj.get(u),"reduced_ad",config.reduced_adj.__getitem__(u))
+            #print("adj", adj.get(v), "reduced_ad", config.reduced_adj.__getitem__(v))
+
+
+            '''
+            for neigh in config.reduced_adj.get(u):
+                if u > neigh:
+                    if (neigh, u) in links:
+                        config.link_weights[(neigh, u)] = 1000000
+                        print("config.link_weights[(neigh, u)]",config.link_weights[(neigh, u)],"for",neigh, u)
+                else:
+                    if (u,neigh) in links:
+                        config.link_weights[(u, neigh)] = 1000000
+                        print("config.link_weights[(u, neigh)]", config.link_weights[(u, neigh)], "for", u, neigh)
+                for inner_neigh in config.reduced_adj.get(neigh):
+                    if neigh < inner_neigh:
+                        if (neigh, inner_neigh) in links:
+                            config.link_weights[(neigh, inner_neigh)] = 1000000
+                            print("config.link_weights[(neigh, inner_neigh)]", config.link_weights[(neigh, inner_neigh)], "for", neigh, inner_neigh)
+                    else:
+                        if (inner_neigh, neigh) in links:
+                            config.link_weights[(inner_neigh, neigh)] = 1000000
+                            print("config.link_weights[(inner_neigh, neigh)]", config.link_weights[(inner_neigh, neigh)], "for", inner_neigh, neigh)
+
+            for neigh in config.reduced_adj.get(v):
+                if v > neigh:
+                    if (neigh, v) in links:
+                        config.link_weights[(neigh, v)] = 1000000
+                        print("config.link_weights[(neigh, v)]", config.link_weights[(neigh, v)], "for", neigh, v)
+                else:
+                    if (v, neigh) in links:
+                        config.link_weights[(v, neigh)] = 1000000
+                        print("config.link_weights[(v, neigh)]", config.link_weights[(v, neigh)], "for", v, neigh)
+
+                for inner_neigh in config.reduced_adj.get(neigh):
+                    if neigh < inner_neigh:
+                        if (neigh, inner_neigh) in links:
+                            config.link_weights[(neigh, inner_neigh)] = 1000000
+                            print("config.link_weights[(neigh, inner_neigh)]", config.link_weights[(neigh, inner_neigh)], "for", neigh, inner_neigh)
+                    else:
+                        if (inner_neigh, neigh) in links:
+                            config.link_weights[(inner_neigh, neigh)] = 1000000
+                            print("config.link_weights[(inner_neigh, neigh)]", config.link_weights[(inner_neigh, neigh)], "for", inner_neigh, neigh)
+
+
+
+
+            for idx,n in enumerate(path_nodes):
+                if n in config.two_hops.get(u):
+                    print(n,"is a 2 hops neighbor of",u,"|",config.two_hops.get(u),"so",n,path_nodes[idx+1])
+                    for neighbor in adj.get(u):
+                        if u > neighbor:
+                            config.link_weights[(neighbor, u)] = 1000000
+                        else:
+                            config.link_weights[(u, neighbor)] = 1000000
+                    if n < path_nodes[idx+1]:
+                        config.link_weights[(n,path_nodes[idx+1])] = 1000000
+                        print("n < path_nodes[idx+1]",n,path_nodes[idx+1])
+                    elif n > path_nodes[idx+1]:
+                        config.link_weights[(path_nodes[idx + 1],n)] = 1000000
+                        print("n > path_nodes[idx+1]", path_nodes[idx + 1], n)
+
+                    print("~ ", u, v, "config.link_weights[(u,v)]", config.link_weights[(int(u), int(v))])
+                    #print("\nlinks[(u,v)]", links[(n, path_nodes[idx + 1])], n, path_nodes[idx + 1])
+                    break
+            '''
+
+            for idx, n in enumerate(path_nodes):
+                config.link_weights[(u,v)] = 1000000
+
+                if (n in config.two_hops.get(u)):
+                    if n < path_nodes[idx+1]:
+                        config.link_weights[(n,path_nodes[idx+1])] = 1000000
+                    else:
+                        config.link_weights[(path_nodes[idx + 1],n)] = 1000000
+
+                    if path_nodes[idx+1] < u:
+                        config.link_weights[(path_nodes[idx + 1], u)] = 1000000
+                    else:
+                        config.link_weights[(u, path_nodes[idx + 1])] = 1000000
+
+
+                elif (n in config.two_hops.get(v)):
+                    if n < path_nodes[idx + 1]:
+                        config.link_weights[(n, path_nodes[idx + 1])] = 1000000
+                    else:
+                        config.link_weights[(path_nodes[idx + 1], n)] = 1000000
+
+                    if path_nodes[idx + 1] < v:
+                        config.link_weights[(path_nodes[idx + 1], v)] = 1000000
+                    else:
+                        config.link_weights[(v, path_nodes[idx + 1])] = 1000000
+
+
+
+        #shortest_path, path_nodes = sp.get_shortest_path(config.reduced_adj, config.link_weights, frm, to)
         if shortest_path is None:
             print("EMBEDDING HAS FAILED!")
             return
     else:
-        print("config.has_embedding is",config.has_embedding)
         shortest_path, path_nodes = sp.get_shortest_path(adj, links, frm, to)
-
-    print("??path nodes",path_nodes)
 
     e_list, e_list2 = get_conflicting_links(path_nodes)
 
@@ -432,18 +461,20 @@ def verify(link_reqiurement, frm, to, node_requirement):
     else:
         print("all nodes in path have enough resource")
 
-    print("shortest_path", shortest_path)
-    print("path nodes", path_nodes)
     link_check, VN_links = check_link_constraints(e_list, e_list2, link_reqiurement['load'], link_reqiurement['plr'],shortest_path)
-    print("link_check",link_check)
+    #print("link_check",link_check)
     if link_check != (0,0):
         print("link_check is", link_check)
-        if config.counter_value > 100:
+        if config.counter_value > 50:
             print(link_check, "do not have enough resource")
             print("EMBEDDING HAS FAILED!!")
             return
         if link_check not in config.avoid:
+            print("was not in link_check ", link_check)
             config.avoid.append(link_check)
+        else:
+            print("already in link_check ", link_check)
+        print(link_check,"need more")
         verify(link_reqiurement, frm, to, node_requirement)
 
  #       reduce_feasible_edges(link_reqiurement, link_check_u, link_check_v, node_requirement)
@@ -453,55 +484,38 @@ def verify(link_reqiurement, frm, to, node_requirement):
         config.feasible = True
         config.has_embedding = True
         commit_vn(VN_nodes,VN_links,node_requirement,e_list, e_list2, path_nodes, shortest_path)
-        print("shortest_path",shortest_path)
-        print("path nodes",path_nodes)
-
-
-
-##    show_graph_plot(wsn.get_wsn_links(), shortest_path, [frm,to])
-
-def reduce_feasible_edges(link_reqiurement, u, v, node_requirement):
-
-    #reduced_adj = dict()
-    reduced_links = dict()
-    print(type(adj),"adj",adj)
-    print(type(links),"links",links)
-    ab = nx.Graph()
-
-    for node in adj:
-        for neighbor in wsn.get_adjacency_list().__getitem__(node):
-            print(node,neighbor,"dont match", u, v)
-            if (node == u) and (neighbor == v):
-                print("match",u,v)
-
-    print(adj)
-    #print(reduced_adj)
-
-
-    verify(link_reqiurement, u, v, node_requirement)  ##recalculate path
-
-    #shortest_path, path_nodes = sp.display_shortest_path(get_shortest_path(adj, links, frm, to))
 
 def commit_vn(VN_nodes, VN_links, required_load,e_list, e_list2, path_nodes, shortest_path):
     map_nodes(VN_nodes.nodes(), required_load)
     map_links(e_list, e_list2, required_load)
-
-    print("path_nodes", path_nodes, "\nrequired_load", required_load)
-
-    print("VN Nodes - ", VN_nodes.nodes(data=True))
-    print("VN Links - ", VN_links.edges(data=True))
     vn = (VN_nodes, VN_links, shortest_path, path_nodes)
-    print("here wsn.get_wsn_links()", VN_links.edges(data=True), "\n shortest_path", shortest_path,
-          "\n path_nodes", path_nodes)
     config.VWSNs.append(vn)
 
+    print("config.link_weights after commit= ", config.link_weights )
+    print("original links after commit", links)
 
+    display_edge_attr(WSN_Links)
+    display_node_attr(WSN_Nodes)
 
+    fig = plt.figure(figsize=(30,15),dpi=150)
+
+    plt1 = fig.add_subplot(1, 3, 1)
+
+    generate_plot(VN_links, shortest_path, path_nodes, plt1, False)
+    plt1 = fig.add_subplot(1, 3, 2)
+    generate_plot(WSN_Links, shortest_path, path_nodes, plt1, False)
+    plt1 = fig.add_subplot(1, 3, 3)
+    generate_plot(WSN_Links, shortest_path, path_nodes, plt1, True)
+    config.plot_counter += 1
+
+    plt.axis('on')
+    plt.savefig("graph_" + str(config.plot_counter) + ".png")  # save as png
 
 
 def check_link_constraints(e_list, e_list2, required_load, required_plr, shortest_path):
     VN_links = nx.Graph()
-    print("checking links ---- ",e_list,"\ne_list2 -- ",e_list2,"shortest_path",shortest_path)
+    #print("checking links ---- ",e_list,"\ne_list2 -- ",e_list2,"shortest_path",shortest_path)
+    print("check_link_constraints")
     for u,v in shortest_path:
 
         if WSN_Links[u][v]['load'] + (required_load * e_list.count((u, v))) > 100:
@@ -514,29 +528,28 @@ def check_link_constraints(e_list, e_list2, required_load, required_plr, shortes
         else:
             allocated_load = (required_load * e_list.count((u, v)))
             VN_links.add_edge(u,v, {'load':allocated_load})
-            print(u, v, "can supply",allocated_load)
+            #print(u, v, "can supply",allocated_load)
             return_value = (0,0)
-    print("RETURN ",return_value)
+    print("RETURN LINK ",return_value)
     return return_value,VN_links
 
 
 def check_node_constraints(nodes_in_path, required_load):
     VN_nodes = nx.Graph()
-    print("checking nodes -----",nodes_in_path)
+    #print("checking nodes -----",nodes_in_path)
+    print("check_node_constraints")
     for idx,n in enumerate(nodes_in_path):
         VN_nodes.add_node(n, {'load': required_load})
-        if idx == 0:
-            if WSN_Nodes.node[n]['load'] + required_load > 100:
-                print("Source node",n," has - ",WSN_Nodes.node[n]['load'],"and require",+ required_load )
-                return n, VN_nodes
-        elif idx == (len(nodes_in_path) - 1):
-            if WSN_Nodes.node[n]['load'] + (required_load) > 100:
-                print("Sink node",n,"has - ",WSN_Nodes.node[n]['load'],"and require",+ required_load )
-                return n, VN_nodes
-        else:
-            if WSN_Nodes.node[n]['load']  + required_load > 100:
-                print("Relay node",n,"has - ",WSN_Nodes.node[n]['load'],"and require",+ required_load )
-                return n, VN_nodes
+        if WSN_Nodes.node[n]['load'] + required_load > 100:
+            if idx == 0:
+                    print("Source node",n," has - ",WSN_Nodes.node[n]['load'],"but require",+ required_load )
+                    return n, VN_nodes
+            elif idx == (len(nodes_in_path) - 1):
+                    print("Sink node",n,"has - ",WSN_Nodes.node[n]['load'],"but require",+ required_load )
+                    return n, VN_nodes
+            else:
+                    print("Relay node",n,"has - ",WSN_Nodes.node[n]['load'],"but require",+ required_load )
+                    return n, VN_nodes
     return 0, VN_nodes
 
 def draw_graph():
@@ -634,7 +647,7 @@ if __name__ == '__main__':
             nodes_to_embed = nodes_to_embed.split(",")
             quota = input("quota: ")
 
-            embed_nodes(nodes_to_embed,quota)
+ #           embed_nodes(nodes_to_embed,quota)
 
         elif user_input is '6':
             show_graph_plot(wsn.get_wsn_links(), shortest_path, path_nodes)
@@ -642,20 +655,20 @@ if __name__ == '__main__':
             display_node_attr(WSN_Nodes)
 
         elif user_input is '7':
-            node1 = input(" source node: ")
-            if node1 != "":
-                node2 = input(" sink node: ")
+            source = input(" source node: ")
+            if source != "":
+                sink = input(" sink node: ")
             else:
                 continue
-            if node2 != "":
+            if sink != "":
                 quota = input(" quota: ")
             else:
                 continue
 
 
 
-            VWSN_nodes = {int(node1): {'load': int(quota)},
-                          int(node2): {'load': int(quota)}}
+            VWSN_nodes = (int(source), {'load': int(quota)},
+                          int(sink), {'load': int(quota)})
 
             link_reqiurement = {'load': int(quota), 'plr': 40}
             VN = (1000, VWSN_nodes, link_reqiurement)

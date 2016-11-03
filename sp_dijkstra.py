@@ -29,8 +29,8 @@ import config
 
 def dijkstra(adj, costs, s, t):
 
-    print(config.avoid,"///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////")
-    print("adj",adj,"\ncosts",costs,"\ns",s," t",t)
+    #print(config.avoid,"///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////")
+    #print("adj",adj,"\ncosts",costs)
     ''' Return predecessors and min distance if there exists a shortest path
         from s to t; Otherwise, return None '''
     Q = []     # priority queue of items; note item is mutable.
@@ -54,7 +54,7 @@ def dijkstra(adj, costs, s, t):
         heapq.heappush(Q, item)
         Qd[v] = item
 
-    print("start at:", s)
+    #print("start at:", s)
     while Q:
 
   #      print("Q is: ",Q)

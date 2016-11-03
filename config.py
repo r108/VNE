@@ -1,6 +1,8 @@
 counter_value = 0
-plot_counter = 1
+plot_counter = 0
 avoid = []
+penalize = []
+failed_links_list = []
 feasible = False
 has_embedding = False
 VWSNs = []
