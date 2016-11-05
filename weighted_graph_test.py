@@ -118,6 +118,11 @@ def show_graph_plot(G,shortest_path, path):
     plt.show() # display
 
 def generate_plot(G,shortest_path, path,plt,weight_flag):
+    print("G", type(G), "|", G)
+    print("G.nodes type", type(G.nodes()), "|", G.nodes())
+    print("G.edges type", type(G.edges()), "|", G.edges())
+
+
     embeding_positions = list(map(int, path))
     colors = []
 
@@ -178,11 +183,52 @@ def display_data_structs():
     print("Links - ", links)
 ######################################################################################################
 
+def get_conflicting_links2(path_nodes):
+    p_nodes = []
+    p_nodes.extend(path_nodes)
+    counter1 = 0
+    elist = []
+    all_path_nodes = []
+    all_path_nodes.extend(p_nodes)
+    p_nodes.pop()
+    for pn in p_nodes:
+        counter1 = counter1 + 1
+        print("")
+        already_added_list = []
+        print("already_added_list",already_added_list)
+        already_added_list.append(pn)
+        print("already_added_list after adding pn",pn,"|",already_added_list)
 
+        for n in config.reduced_adj.get(pn):
+            counter1 = counter1 + 1
+            if pn < n:
+                elist.append((pn, n))
+            elif n < pn:
+                elist.append((n, pn))
+            already_added_list.append(n)
+            print("already_added_list after adding n", n, "|", already_added_list)
+            for nn in config.reduced_adj.get(n):
+                counter1 = counter1 + 1
+                if nn not in already_added_list:
+                    if nn < n:
+                        elist.append((nn, n))
+                    elif n < nn:
+                        elist.append((n, nn))
+                already_added_list.append(nn)
+                print("already_added_list after adding nn", nn, "|", already_added_list)
 
+    elist2 = []
+    elist2 = list(set(elist))
+
+    print("get conflict elist: ", elist)
+    print("get conflict elist2: ", elist2)
+    print("ccounter1 ",counter1)
+
+    return elist, elist2
 
 
 def get_conflicting_links(path_nodes):
+    print("get_conflicting_links", path_nodes)
     p_nodes = []
     p_nodes.extend(path_nodes)
     counter1 = 0
@@ -192,44 +238,62 @@ def get_conflicting_links(path_nodes):
     all_path_nodes = []
 #    shortest_path, path_nodes = sp.display_shortest_path(get_shortest_path(adj, links, cn_frm, cn_to))
     all_path_nodes.extend(p_nodes)
+    print("all_path_nodes",all_path_nodes)
     p_nodes.pop()
+    print("p_nodes after pop()",p_nodes)
 
     for pn in p_nodes:
+        print("for pn ",pn,"in p_nodes")
         counter1 = counter1 + 1
         counter2 = counter2 + 1
         interferes = []
-        interferes.extend(config.two_hops.__getitem__(pn))
+        print("config.two_hops.get(pn)",config.two_hops.get(pn))
+        interferes.extend(config.two_hops.get(pn))
         interferes.append(pn)
+        print("interferes after interferes.append(pn)",interferes)
 
         remove_list = []
         for n in config.reduced_adj.get(pn):
+            print("for n ", n, "in config.reduced_adj.get(pn)",pn,"|",config.reduced_adj.get(pn))
             counter1 = counter1 + 1
- #           inner_neighbor_list = []
+            inner_neighbor_list = []
+            print("inner_neighbor_list",inner_neighbor_list)
             inner_neighbor_list = config.reduced_adj.get(n)
+            print("inner_neighbor_list = config.reduced_adj.get(n)",inner_neighbor_list)
             remove_list.append(pn)
-
+            print("after remove_list.append(pn)",pn,"remove_list is",remove_list)
             if (pn in interferes) and (n in interferes):
+                print("if (pn in interferes) and (n in interferes): |",interferes)
                 if pn < n:
-                    #print("append pn n",pn,n)
+                    print("append (pn, n)",pn,n, "to elist")
                     elist.append((pn, n))
+                    print("so elist is",elist)
                 else:
-                    #print("append n pn",n,pn)
+                    print("else append (n, pn)",n,pn)
                     elist.append((n, pn))
-
+                    print("so elist is", elist)
+            print("inner_neighbor_list",inner_neighbor_list)
             inner_neighbor_list = [x for x in inner_neighbor_list if x not in remove_list]
+            print("remove remove_list items",remove_list)
+            print("so inner_neighbor_list is", inner_neighbor_list)
 
             for nn in inner_neighbor_list:
+                print("for nn ",nn," in inner_neighbor_list")
                 counter1 = counter1 + 1
                 if nn < n:
-                    #print("append nn n",nn,n)
+                    print("append (nn, n)",nn,n, "to elist")
                     elist.append((nn, n))
                 else:
-                    #print("append n nn",n,nn)
+                    print("append (n, nn)",n,nn, "to elist")
                     elist.append((n, nn))
+            print("remove_list",remove_list)
             remove_list.append(n)
-
+            print("remove_list after append n",n,"|", remove_list)
+        elist2 = []
+        print("elist2",elist2)
         elist2 = list(set(elist))
-        #print("counter1", counter1)
+        print("elist2 = list(set(elist)) |",elist2)
+        print("counter1", counter1)
     print("get conflict elist: ", elist)
     print("get conflict elist2: ", elist2)
 
@@ -322,12 +386,12 @@ def verify(link_reqiurement, frm, to, node_requirement):
         if (0,0) in config.avoid: config.avoid.remove((0,0))
 
         shortest_path, path_nodes = sp.get_shortest_path(config.reduced_adj, config.link_weights, frm, to)
-
-        print("ccconfig.avoid",config.avoid)
+        e_list, e_list2 = get_conflicting_links(path_nodes)
+        print("cconfig.failed_links_list",config.failed_links_list)
         for u,v in config.avoid:
-            #config.avoid.remove((u, v))
+            config.avoid.remove((u, v))
             print("ccconfig.avoid after", config.avoid)
-            print("sp",shortest_path,"\nn", path_nodes )
+            #print("sp",shortest_path,"\nn", path_nodes )
 
             print("u,v",u,v)
             #print(config.reduced_adj.get(u), "forrr", v)
@@ -409,10 +473,13 @@ def verify(link_reqiurement, frm, to, node_requirement):
             '''
 
             for idx, n in enumerate(path_nodes):
+                print("!n",n,"!!!",idx,"path_nodes",path_nodes)
                 config.link_weights[(u,v)] = 1000000
 
                 if (n in config.two_hops.get(u)):
+                    print(u,"config.two_hops.get(u)",config.two_hops.get(u))
                     if n < path_nodes[idx+1]:
+                        print("!1", idx, "!path_nodes fails here", path_nodes)
                         config.link_weights[(n,path_nodes[idx+1])] = 1000000
                     else:
                         config.link_weights[(path_nodes[idx + 1],n)] = 1000000
@@ -424,7 +491,10 @@ def verify(link_reqiurement, frm, to, node_requirement):
 
 
                 elif (n in config.two_hops.get(v)):
+                    print(v,"config.two_hops.get(v)",config.two_hops.get(v))
+                    print("!!path_nodes",idx," fails here", path_nodes)
                     if n < path_nodes[idx + 1]:
+                        print("!",idx,"!path_nodes fails here", path_nodes)
                         config.link_weights[(n, path_nodes[idx + 1])] = 1000000
                     else:
                         config.link_weights[(path_nodes[idx + 1], n)] = 1000000
@@ -433,6 +503,8 @@ def verify(link_reqiurement, frm, to, node_requirement):
                         config.link_weights[(path_nodes[idx + 1], v)] = 1000000
                     else:
                         config.link_weights[(v, path_nodes[idx + 1])] = 1000000
+            print("path enumeration has finished")
+            print("n is ", n," and idx is ",idx)
 
 
 
@@ -442,8 +514,9 @@ def verify(link_reqiurement, frm, to, node_requirement):
             return
     else:
         shortest_path, path_nodes = sp.get_shortest_path(adj, links, frm, to)
+        e_list, e_list2 = get_conflicting_links(path_nodes)
 
-    e_list, e_list2 = get_conflicting_links(path_nodes)
+
 
     # get list of unique nodes from conflicting link list
     nodes_in_path = []
@@ -474,6 +547,11 @@ def verify(link_reqiurement, frm, to, node_requirement):
             config.avoid.append(link_check)
         else:
             print("already in link_check ", link_check)
+
+        if link_check not in config.failed_links_list:
+            print(link_check,"was added to config.failed_links_list")
+            config.failed_links_list.append(link_check)
+
         print(link_check,"need more")
         verify(link_reqiurement, frm, to, node_requirement)
 

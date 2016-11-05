@@ -1,7 +1,7 @@
 counter_value = 0
 plot_counter = 0
 avoid = []
-penalize = []
+penalize = dict()
 failed_links_list = []
 feasible = False
 has_embedding = False
